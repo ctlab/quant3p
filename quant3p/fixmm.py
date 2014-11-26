@@ -15,7 +15,10 @@ def update_if(d, f, key, value):
     d[key] = value
     return old_value
 
-def main(args):
+def main():
+    argparser = make_argparser()
+    args = argparser.parse_args()
+
     exons = HTSeq.GenomicArray("auto", stranded=True, typecode='b')
 
     extension_3p = args.extension_3p
@@ -206,6 +209,4 @@ def make_argparser():
 
 
 if __name__ == '__main__':
-    argparser = make_argparser()
-    args = argparser.parse_args()
-    main(args)
+    main()
