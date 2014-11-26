@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+
+#### Set up
+
+SCRIPTNAME=`basename $0`
+function error() 
+{
+    local PARENT_LINENO="$1"
+    local MESSAGE="$2"
+    local CODE="${3:-1}"
+    if [[ -n "$MESSAGE" ]] ; then
+        echo "$SCRIPTNAME: Error on or near line ${PARENT_LINENO}: ${MESSAGE}; exiting with status ${CODE}"
+    else
+        echo "$SCRIPTNAME: Error on or near line ${PARENT_LINENO}; exiting with status ${CODE}"
+    fi
+    exit "${CODE}"
+}
+
+trap 'error ${LINENO}' ERR
+# setting exit on error and inheriting of ERR trap
+set -eE
+
+die()
+{
+    if [ -n "$@" ]; then
+        echo "$@" >&2
+    else
+        echo "FAILED" >&2
+    fi
+    exit 1
+}
+
+
+#### Arguments
+
+GSIZE="3e9"
+QVALUE="0.01"
+
+# help message
+help()
+{
+    echo "usage: $SCRIPTNAME <options> <bam-file>+"
+    echo ""
+    echo "mandatory arguments:"
+    echo "-n NAME name of the experiment; mandatory"
+    echo ""
+    echo "optional arguments:"
+    echo "-g GSIZE approximate size of the genome (for MACS); default = $GSIZE"
+    echo "-q QVALUE q-value cutoff (for MACS); default = $QVALUE"
+    echo "-h|--help shows this message and exit"
+}
+
+
+if [ $# -eq 0 ]; then
+    help
+    exit
+fi
+
+while true; do
+    case "$1" in
+        -n) NAME="$2"; shift 2;;
+        -g) GSIZE="$2"; shift 2;;
+        -q) QVALUE="$2"; shift 2;;
+        -h|--help) help; exit 0;;
+        --) shift 1; break;;
+        -*) die "unrecognized option: $1";;
+        *) break;;
+    esac
+done
+
+if [ -z "$NAME" ]; then
+    die "NAME is not specified (try -h for details)"
+fi
+
+BAMS=("$@")
+
+
+#### Run
+
+echo "Splitting positive and negative alignments"
+
+samtools cat -o - "${BAMS[@]}" | samtools view -b -F 16 - -o "${NAME}.pos.bam" & pos_pid="$!"
+samtools cat -o - "${BAMS[@]}" | samtools view -b -f 16 - -o "${NAME}.neg.bam" & neg_pid="$!"
+
+wait $pos_pid 
+wait $neg_pid
+
+echo "Calling peaks"
+
+macs2 callpeak -t "${NAME}.pos.bam" --nomodel -f BAM -g "$GSIZE" -n "${NAME}.pos" -q "$QVALUE" & pos_pid="$!"
+macs2 callpeak -t "${NAME}.neg.bam" --nomodel -f BAM -g "$GSIZE" -n "${NAME}.neg" -q "$QVALUE" & neg_pid="$!"
+
+wait $pos_pid 
+wait $neg_pid
+
+rm "${NAME}.pos.bam" "${NAME}.neg.bam"
+
+echo "Combining peaks"
+ 
+cat <(sed "s/\t\.\t/\t+\t/" ${NAME}.pos_peaks.narrowPeak) \
+    <(sed "s/\t\.\t/\t-\t/" ${NAME}.neg_peaks.narrowPeak) \
+    > ${NAME}_peaks.narrowPeak
+
+
+echo "Done"
