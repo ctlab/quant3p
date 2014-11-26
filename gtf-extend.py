@@ -50,6 +50,8 @@ def main(args):
 
     last_exons = {}
 
+    exonic_peaks = set()
+
     def update_last_exon(exon):
         key = (exon.attr["transcript_id"], exon.iv.chrom, exon.iv.strand)
         return update_if(last_exons, is_upstream, key, exon)
@@ -59,12 +61,17 @@ def main(args):
 
     for feature in HTSeq.GFF_Reader(args.gtf_file):
         if feature.type == "exon":
+            steps = peaks[feature.iv].steps()
+            values = [value for (iv, value) in steps]
+            exonic_peaks |= reduce(set.union, values, set())
+
             to_print = update_last_exon(feature)
             if to_print:
                 gtf_out.write(to_print.get_gff_line())
         else: # leave other features as is
             gtf_out.write(feature.get_gff_line())
 
+    print "Number of exonic peaks:", len(exonic_peaks)
     exons_added = 0
 
     extns_out = None
@@ -90,6 +97,8 @@ def main(args):
         overlapping_peaks = reduce(set.union, values, set())
 
         gtf_out.write(exon.get_gff_line())
+
+        overlapping_peaks.difference_update(exonic_peaks)
 
         for peak in overlapping_peaks:
             extension = copy(peak)
