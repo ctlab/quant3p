@@ -127,13 +127,13 @@ def main(args):
         return
 
     infile = HTSeq.BAM_Reader(args.input_file)
-    outfile = HTSeq.BAM_Writer(args.outpuf_file, infile)
+    outfile = HTSeq.BAM_Writer.from_BAM_Reader(args.output_file, infile)
 
     for aln in infile:
         if aln.read.name in tofix:
             aln.optional_fields = [("NH", 1), ("HI", 1)] + \
                     [tag for tag in aln.optional_fields if tag[0] in ["NH", "HI"]]
-        outfile.write(read)
+        outfile.write(aln)
 
     outfile.close()
 
