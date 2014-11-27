@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+
+#### Set up
+
+SCRIPTNAME=`basename $0`
+function error() 
+{
+    local PARENT_LINENO="$1"
+    local MESSAGE="$2"
+    local CODE="${3:-1}"
+    if [[ -n "$MESSAGE" ]] ; then
+        echo "$SCRIPTNAME: Error on or near line ${PARENT_LINENO}: ${MESSAGE}; exiting with status ${CODE}"
+    else
+        echo "$SCRIPTNAME: Error on or near line ${PARENT_LINENO}; exiting with status ${CODE}"
+    fi
+    exit "${CODE}"
+}
+
+trap 'error ${LINENO}' ERR
+# setting exit on error and inheriting of ERR trap
+set -eE
+
+die()
+{
+    if [ -n "$@" ]; then
+        echo "$@" >&2
+    else
+        echo "FAILED" >&2
+    fi
+    exit 1
+}
+
+
+#### Arguments
+
+GSIZE="3e9"
+QVALUE="0.01"
+NPROC="2"
+KEEP_TEMP=""
+
+# help message
+help()
+{
+    echo "usage: $SCRIPTNAME <options> <bam-file>+"
+    echo ""
+    echo "mandatory arguments:"
+    echo "-n NAME name of the experiment; mandatory"
+    echo "-g/--gtf GTF annotaion ; mandatory"
+    echo ""
+    echo "optional arguments:"
+    echo "-p NPROC number of processes to do in parallel; default = $NPROC"
+    echo "--keep-temp keep temporary files"
+    echo "--genome GSIZE approximate size of the genome (for MACS); default = $GSIZE"
+    echo "--qvalue QVALUE q-value cutoff (for MACS); default = $QVALUE"
+    echo "-h|--help shows this message and exit"
+}
+
+
+if [ $# -eq 0 ]; then
+    help
+    exit
+fi
+
+while true; do
+    case "$1" in
+        -n|--name) NAME="$2"; shift 2;;
+        -g|--gtf) GTF="$2"; shift 2;;
+        --genome) GSIZE="$2"; shift 2;;
+        --qvalue) QVALUE="$2"; shift 2;;
+        -p) NPROC="$2"; shift 2;;
+        --keep-temp) KEEP_TEMP="--keep-temp"; shift 1;;
+        -h|--help) help; exit 0;;
+        --) shift 1; break;;
+        -*) die "unrecognized option: $1";;
+        *) break;;
+    esac
+done
+
+echo "keep_temp='$KEEP_TEMP'"
+
+if [ -z "$NAME" ]; then
+    die "NAME is not specified (try -h for details)"
+fi
+
+if [ -z "$GTF" ]; then
+    die "GTF is not specified (try -h for details)"
+fi
+
+BAMS=("$@")
+
+if [ "${#BAMS}" == 0 ]; then
+    die "no bam files specified (try -h for details)"
+fi
+
+#### Run
+
+echo "Calling peaks..."
+macs2-stranded $KEEP_TEMP -n "${NAME}" -g "${GSIZE}" -q "${QVALUE}" "${BAMS[@]}" | sed "s/^/  /"
+peaks="${NAME}"_peaks.narrowPeak
+
+echo "Extending annotaion..."
+fixed_gtf="${NAME}.`basename "${GTF}" .gtf`.fixed.gtf"
+gtf-extend -g "${GTF}" -p "${peaks}" -o "${fixed_gtf}" | sed "s/^/  /"
+
+
+export fixed_dir="${NAME}.bam_fixed"
+mkdir -p "${fixed_dir}"
+
+export htseq_dir="${NAME}.htseq"
+mkdir -p "${htseq_dir}"
+
+count_bam() {
+    BAM="$1"
+    fixed_bam="$fixed_dir/`basename "${BAM}"`"
+    fix-mm -g "${GTF}" "${BAM}" -o "${fixed_bam}"
+    TAG=`basename "${BAM}" .bam`
+    samtools view -h "${BAM}" | htseq-count -s yes -t exon - "${fixed_gtf}" > "${htseq_dir}/${TAG}.htseq.out"
+    if [ -z "${KEEP_TEMP}" ]; then
+        rm "${fixed_bam}"
+    fi
+}
+
+
+export -f count_bam
+export GTF
+export fixed_gtf
+export KEEP_TEMP
+
+find "${BAMS[@]}" -print0 | xargs -0 -n 1 -P "${NPROC}" bash -c 'count_bam "$@"' _ 
+
+if [ -z "${KEEP_TEMP}" ]; then
+    rmdir "${fixed_dir}"
+    rm "${fixed_gtf}"
+    rm "${peaks}"
+fi
+
+tags=()
+htseq_outs=()
+
+header=""
+
+fields="1"
+
+i=0
+
+for bam in "${BAMS[@]}"
+do
+    tag=`basename "${bam}" .bam`
+    htseq_out="${htseq_dir}/${tag}.htseq.out"
+    tags+=("${tag}")
+    htseq_outs+=("${htseq_out}")
+    header="${header}\t${tag}"
+    i=$(($i+2))
+    fields="${fields},${i}"
+done
+
+cat <(echo -e "${header}") \
+    <(paste "${htseq_outs[@]}" | cut -f "${fields}") \
+    > "${NAME}.cnt"
+
+if [ -z "${KEEP_TEMP}" ]; then
+    for htseq_out in "${htseq_outs[@]}"
+    do
+        rm "${htseq_out}"
+    done
+
+    rmdir "${htseq_dir}"
+fi
+
+echo "Done"

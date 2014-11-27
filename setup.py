@@ -12,7 +12,7 @@ setup(name='quant3p',
           'HTSeq',
           'macs2 >= 2.1.0'
           ],
-      scripts=['bin/macs2-stranded'],
+      scripts=['bin/macs2-stranded', 'bin/quant3p'],
       entry_points = {
           'console_scripts': [
               'fix-mm=quant3p.fixmm:main',
