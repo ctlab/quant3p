@@ -5,7 +5,9 @@ A set of scripts for 3' RNA-seq quantification
 
 ## Install
 
-To isntall run `python setup.py install`
+To install run `python setup.py install`.
+
+To install locally, without root privelegies, run `python setup.py install --user`. Don't forget to add `.local/bin` to your `PATH`. You can do it by adding line `export PATH="$HOME/.local/bin:$PATH"` to the `~/.profile` file.
 
 ## Example
 
