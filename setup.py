@@ -10,6 +10,7 @@ setup(name='quant3p',
       packages=['quant3p'],
       install_requires=[
           'HTSeq',
+          'pysam',
           'macs2 >= 2.1.0'
           ],
       scripts=['bin/macs2-stranded', 'bin/quant3p'],

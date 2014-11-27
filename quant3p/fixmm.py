@@ -3,6 +3,7 @@
 import sys
 import HTSeq
 import argparse
+import pysam
 
 def update_if(d, f, key, value):
     if not key in d:
@@ -129,16 +130,17 @@ def main():
     if args.stats_only:
         return
 
-    infile = HTSeq.BAM_Reader(args.input_file)
-    outfile = HTSeq.BAM_Writer.from_BAM_Reader(args.output_file, infile)
+    in_samfile = pysam.Samfile(args.input_file, "rb")
+    out_samfile = pysam.Samfile(args.output_file, "wb", template=in_samfile)
 
-    for aln in infile:
-        if aln.read.name in tofix:
-            aln.optional_fields = [("NH", 1), ("HI", 1)] + \
-                    [tag for tag in aln.optional_fields if not tag[0] in ["NH", "HI"]]
-        outfile.write(aln)
+    for read in in_samfile:
+        if read.qname in tofix:
+            read.tags = [("NH", 1), ("HI", 1)] + \
+                    [tag for tag in read.tags if not tag[0] in ["NH", "HI"]]
+        out_samfile.write(read)
 
-    outfile.close()
+    in_samfile.close()
+    out_samfile.close()
 
 
 def make_argparser():
