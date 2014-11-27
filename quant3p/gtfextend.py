@@ -66,12 +66,9 @@ def main():
             steps = peaks[feature.iv].steps()
             values = [value for (iv, value) in steps]
             exonic_peaks |= reduce(set.union, values, set())
+            update_last_exon(feature)
 
-            to_print = update_last_exon(feature)
-            if to_print:
-                gtf_out.write(to_print.get_gff_line())
-        else: # leave other features as is
-            gtf_out.write(feature.get_gff_line())
+        gtf_out.write(feature.get_gff_line())
 
     print "Number of exonic peaks:", len(exonic_peaks)
     exons_added = 0
@@ -97,8 +94,6 @@ def main():
         steps = peaks[post3p_iv].steps()
         values = [value for (iv, value) in steps]
         overlapping_peaks = reduce(set.union, values, set())
-
-        gtf_out.write(exon.get_gff_line())
 
         overlapping_peaks.difference_update(exonic_peaks)
 
