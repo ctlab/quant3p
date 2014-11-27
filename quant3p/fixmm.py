@@ -135,7 +135,7 @@ def main():
     for aln in infile:
         if aln.read.name in tofix:
             aln.optional_fields = [("NH", 1), ("HI", 1)] + \
-                    [tag for tag in aln.optional_fields if tag[0] in ["NH", "HI"]]
+                    [tag for tag in aln.optional_fields if not tag[0] in ["NH", "HI"]]
         outfile.write(aln)
 
     outfile.close()
