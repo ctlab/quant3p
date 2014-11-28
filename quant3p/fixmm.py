@@ -137,7 +137,7 @@ def main():
         if read.qname in tofix:
             read.tags = [("NH", 1), ("HI", 1)] + \
                     [tag for tag in read.tags if not tag[0] in ["NH", "HI"]]
-            read.aQual = args.new_aqual
+            read.mapq = args.new_aqual
         out_samfile.write(read)
 
     in_samfile.close()
