@@ -137,6 +137,7 @@ def main():
         if read.qname in tofix:
             read.tags = [("NH", 1), ("HI", 1)] + \
                     [tag for tag in read.tags if not tag[0] in ["NH", "HI"]]
+            read.aQual = args.new_aqual
         out_samfile.write(read)
 
     in_samfile.close()
@@ -161,6 +162,14 @@ def make_argparser():
             default=0,
             type=int,
             help="how far extend 5' exon ends (defaults = 0)")
+
+    parser.add_argument(
+            '--aqual',
+            dest="new_aqual",
+            metavar="QUALITY",
+            default=30,
+            type=int,
+            help="new alignment quality to set for fixed reads (default = 30)")
 
     parser.add_argument(
             '--all-exons',
