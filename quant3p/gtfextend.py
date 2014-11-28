@@ -153,14 +153,14 @@ def make_argparser():
     parser.add_argument(
             '-o', '--out',
             dest="output_file",
-            metavar="BAM",
+            metavar="GTF",
             required=True,
             help="file to write extended annotation")
 
     parser.add_argument(
             '--extns-out',
             dest="extns_out",
-            metavar="FILE",
+            metavar="GTF",
             help="gtf file to print added exons")
 
     parser.add_argument(
