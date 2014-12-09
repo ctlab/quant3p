@@ -76,8 +76,6 @@ while true; do
     esac
 done
 
-echo "keep_temp='$KEEP_TEMP'"
-
 if [ -z "$NAME" ]; then
     die "NAME is not specified (try -h for details)"
 fi
