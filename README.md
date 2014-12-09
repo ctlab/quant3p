@@ -26,22 +26,22 @@ This command produces one file `example.cnt` that contatins gene counts, that lo
 ```
                         2h_rep1  2h_rep2  4h_rep1  4h_rep2
 100039246               0        0        0        0
-11744                   0        0        0        1
-14673                   103      113      49       63
+11744                   112      118      72       86
+14673                   105      114      52       67
 211623                  0        0        0        0
-231842                  44       39       16       17
-232157                  1720     1865     1988     2003
-66039                   0        0        0        0
-78653                   56       73       51       59
+231842                  47       39       16       17
+232157                  1799     1947     2060     2075
+66039                   1        2        0        0
+78653                   147      148      90       131
 NM_001270503_dup1       0        0        0        0
 NM_001270503_dup2       0        0        0        0
 NM_207229_dup1          0        0        0        0
 NM_207229_dup2          0        0        0        0
-__no_feature            214      236      225      250
+__no_feature            463      489      389      433
 __ambiguous             0        0        0        0
 __too_low_aQual         0        0        0        0
 __not_aligned           0        0        0        0
-__alignment_not_unique  826      721      581      610
+__alignment_not_unique  289      190      231      194
 ```
 
 If you want to look at intermediate files, you can use parameter `--keep-temp`.
@@ -136,27 +136,53 @@ Here we use the fixed bam file (`2h_rep1.fixed.bam`) and annotaion (`mm10.slice.
 Output should be like this:
 ```
 100039246               0
+11744                   112
+14673                   105
+211623                  0
+231842                  47
+232157                  1799
+66039                   1
+78653                   147
+NM_001270503_dup1       0
+NM_001270503_dup2       0
+NM_207229_dup1          0
+NM_207229_dup2          0
+__no_feature            463
+__ambiguous             0
+__too_low_aQual         0
+__not_aligned           0
+__alignment_not_unique  289
+```
+
+If we run `htseq-count` for the original data:
+```bash
+samtools view -h example/bam/2h_rep1.bam | htseq-count -s yes -t exon - example/mm10.slice.gtf
+```
+
+A lot of reads will not be counted:
+```
+100039246               0
 11744                   0
-14673                   103
+14673                   0
 211623                  0
 231842                  44
-232157                  1720
+232157                  17
 66039                   0
 78653                   56
 NM_001270503_dup1       0
 NM_001270503_dup2       0
 NM_207229_dup1          0
 NM_207229_dup2          0
-__no_feature            214
+__no_feature            2020
 __ambiguous             0
-__too_low_aQual         537
+__too_low_aQual         0
 __not_aligned           0
-__alignment_not_unique  289
+__alignment_not_unique  826
 ```
 
 ## Dependencies
 
 `macs2-stranded` depends on `samtools` and `macs2` executables.  `macs2` version should be >= 2.0.10
 
-`gtf-extend` and `fix-mm` needs `HTSeq` python package installed.
+`gtf-extend` and `fix-mm` needs `HTSeq` and `pysam` python packages installed.
 
