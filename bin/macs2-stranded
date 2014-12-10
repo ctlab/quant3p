@@ -79,28 +79,20 @@ BAMS=("$@")
 
 #### Run
 
-echo "Splitting positive and negative alignments"
-
-samtools cat -o - "${BAMS[@]}" | samtools view -b -F 16 - -o "${NAME}.pos.bam" & pos_pid="$!"
-samtools cat -o - "${BAMS[@]}" | samtools view -b -f 16 - -o "${NAME}.neg.bam" & neg_pid="$!"
-
-wait $pos_pid 
-wait $neg_pid
-
 echo "Calling peaks"
 
 macs_pos_dir="${NAME}.pos.macs"
 macs_neg_dir="${NAME}.neg.macs"
 
-macs2 callpeak -t "${NAME}.pos.bam" --outdir "${macs_pos_dir}" --nomodel -f BAM -g "$GSIZE" -n "${NAME}.pos" -q "$QVALUE" & pos_pid="$!"
-macs2 callpeak -t "${NAME}.neg.bam" --outdir "${macs_neg_dir}" --nomodel -f BAM -g "$GSIZE" -n "${NAME}.neg" -q "$QVALUE" & neg_pid="$!"
+macs2 callpeak -t <(samtools cat -o - "${BAMS[@]}" | samtools view -F 16 -) \
+    --outdir "${macs_pos_dir}" --nomodel -f SAM -g "$GSIZE" \
+    -n "${NAME}.pos" -q "$QVALUE" & pos_pid="$!"
+macs2 callpeak -t <(samtools cat -o - "${BAMS[@]}" | samtools view -f 16 -) \
+    --outdir "${macs_neg_dir}" --nomodel -f SAM -g "$GSIZE" \
+    -n "${NAME}.neg" -q "$QVALUE" & neg_pid="$!"
 
 wait $pos_pid 
 wait $neg_pid
-
-if [ -z "${KEEP_TEMP}" ]; then
-    rm "${NAME}.pos.bam" "${NAME}.neg.bam"
-fi
 
 echo "Combining peaks"
  
