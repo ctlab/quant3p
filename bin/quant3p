@@ -109,13 +109,10 @@ mkdir -p "${htseq_dir}"
 
 count_bam() {
     BAM="$1"
-    fixed_bam="$fixed_dir/`basename "${BAM}"`"
-    fix-mm -g "${GTF}" "${BAM}" -o "${fixed_bam}"
     TAG=`basename "${BAM}" .bam`
-    samtools view -h "${fixed_bam}" | htseq-count -s yes -t exon - "${fixed_gtf}" > "${htseq_dir}/${TAG}.htseq.out"
-    if [ -z "${KEEP_TEMP}" ]; then
-        rm "${fixed_bam}"
-    fi
+    fix-mm -g "${GTF}" "${BAM}" -o - | \
+        samtools view -h - | \
+        htseq-count -s yes -t exon - "${fixed_gtf}" > "${htseq_dir}/${TAG}.htseq.out"
 }
 
 
