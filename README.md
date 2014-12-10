@@ -120,7 +120,7 @@ fix-mm -g example/mm10.slice.gtf example/bam/2h_rep1.bam -o 2h_rep1.fixed.bam
 Here:
 * `-g example/mm10.slice.gtf ` tells to use `example/mm10.slice.gtf ` as the annotation,*
 * `example/bam/2h_rep1.bam` tells to fix `example/bam/2h_rep1.bam` file,
-* `-o 2h_rep1.fixedbam` tells to put fixed bam-file into `2h_rep1.fixed.bam`,
+* `-o 2h_rep1.fixed.bam` tells to put fixed bam-file into `2h_rep1.fixed.bam`,
 
 In the `2h_rep1.bam` file all the 301 multimappers can be uniquely mapped to a single position covered by an exon.
 
