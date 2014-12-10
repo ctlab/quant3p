@@ -101,9 +101,6 @@ fixed_gtf="${NAME}.`basename "${GTF}" .gtf`.fixed.gtf"
 gtf-extend -g "${GTF}" -p "${peaks}" -o "${fixed_gtf}" | sed "s/^/  /"
 
 
-export fixed_dir="${NAME}.bam_fixed"
-mkdir -p "${fixed_dir}"
-
 export htseq_dir="${NAME}.htseq"
 mkdir -p "${htseq_dir}"
 
@@ -124,7 +121,6 @@ export KEEP_TEMP
 find "${BAMS[@]}" -print0 | xargs -0 -n 1 -P "${NPROC}" bash -c 'count_bam "$@"' _ 
 
 if [ -z "${KEEP_TEMP}" ]; then
-    rmdir "${fixed_dir}"
     rm "${fixed_gtf}"
     rm "${peaks}"
 fi
