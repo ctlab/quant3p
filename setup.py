@@ -9,8 +9,9 @@ setup(name='quant3p',
       license='Apache2',
       packages=['quant3p'],
       install_requires=[
+          'HTseq',
           'pysam',
-          'pybedtools',
+          'pybedtools >= 0.6.9',
           'macs2 >= 2.1.0'
           ],
       scripts=['bin/macs2-stranded', 'bin/quant3p'],
