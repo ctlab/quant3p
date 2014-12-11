@@ -184,5 +184,5 @@ __alignment_not_unique  826
 
 `macs2-stranded` depends on `samtools` and `macs2` executables.  `macs2` version should be >= 2.0.10
 
-`gtf-extend` and `fix-mm` needs `HTSeq` and `pysam` python packages installed.
+`gtf-extend` and `fix-mm` needs `pybedtools` and `pysam` python packages and `bedtools` with `samtools` installed
 
