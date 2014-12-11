@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 
 import sys
-import HTSeq
+import pybedtools
 import argparse
 import pysam
+import logging
+from logging import debug, info, warn, error
+from copy import copy
+
 
 def update_if(d, f, key, value):
     if not key in d:
@@ -16,104 +20,89 @@ def update_if(d, f, key, value):
     d[key] = value
     return old_value
 
+def is_upstream(e1, e2):
+    iv1 = e1
+    iv2 = e2
+    assert iv1.chrom == iv2.chrom
+    assert iv1.strand == iv2.strand
+
+
+    if iv1.strand == "+":
+        return iv1.end < iv2.end
+    else:
+        return iv1.start > iv2.start
+
+def extended_exons(features, extension_5p, extension_3p, extend_all_exons):
+    def extend_iv(iv):
+        res = copy(iv)
+        if res.strand == "+":
+            res.end += extension_3p
+            res.start = max(res.start - extension_5p, 0)
+        elif res.strand == "-":
+            res.end += extension_5p
+            res.start = max(res.start - extension_3p, 0)
+        return res
+
+    last_exons = {}
+
+    def update_last_exon(exon):
+        key = (exon.attrs["transcript_id"], exon.chrom, exon.strand)
+        return update_if(last_exons, is_upstream, key, exon)
+
+    for feature in features:
+        if feature.fields[2] == "exon":
+            iv = feature
+
+            if extend_all_exons:
+                yield extend_iv(iv)
+            else:
+                feature_to_push = update_last_exon(feature)
+                if feature_to_push:
+                    yield feature_to_push
+
+    for exon in last_exons.itervalues():
+        yield extend_iv(exon)
+
 def main():
+    logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)-15s - %(levelname)s: %(message)s"
+            )
     argparser = make_argparser()
     args = argparser.parse_args()
-
-    exons = HTSeq.GenomicArray("auto", stranded=True, typecode='b')
 
     extension_3p = args.extension_3p
     extension_5p = args.extension_5p
 
     if not args.stats_only and not args.output_file:
-        print "Please either proved output file or --stats-only flag"
+        error("Please either proved output file or --stats-only flag")
         sys.exit(1)
 
-    print "Reading annotation..."
+    info("Finding exonic multimappers...")
 
-    def extend_iv(iv):
-        res = iv.copy()
-        if res.strand == "+":
-            res.end += extension_3p
-            res.start -= extension_5p
-        elif res.strand == "-":
-            res.end += extension_5p
-            res.start -= extension_3p
-        res.start = max(res.start, 0)
-        return res
-
-    def is_upstream(e1, e2):
-        iv1 = e1.iv
-        iv2 = e2.iv
-        assert iv1.chrom == iv2.chrom
-        assert iv1.strand == iv2.strand
+    xgtf = pybedtools.BedTool(extended_exons(
+            pybedtools.BedTool(args.gtf_file),
+            extension_5p=extension_5p,
+            extension_3p=extension_3p,
+            extend_all_exons=args.extend_all_exons))
 
 
-        if iv1.strand == "+":
-            return iv1.end < iv2.end
-        else:
-            return iv1.start > iv2.start
+    bamTool = pybedtools.BedTool(args.input_file)
 
-    last_exons = {}
-
-    def update_last_exon(exon):
-        key = (exon.attr["transcript_id"], exon.iv.chrom, exon.iv.strand)
-        return update_if(last_exons, is_upstream, key, exon)
-
-
-    for feature in HTSeq.GFF_Reader(args.gtf_file):
-        if feature.type == "exon":
-            iv = feature.iv
-
-            if args.extend_all_exons:
-                iv = extend_iv(iv)
-            else:
-                feature_to_push = update_last_exon(feature)
-                if feature_to_push:
-                    iv = feature_to_push.iv
-                else:
-                    iv = None
-
-            if iv and iv.length > 0:
-                exons[iv] = True
-
-
-    for exon in last_exons.itervalues():
-        iv = exon.iv
-        iv = extend_iv(iv)
-        if iv.length > 0:
-            exons[iv] = True
-
-
-    print "Finding exonic multimappers..."
     tocheck = {}
 
     # using HTSeq here because of genomic intervals
-
-    for alignment in HTSeq.BAM_Reader(args.input_file):
-        is_multimapper = alignment.optional_field( "NH" ) > 1
+    for alignment in bamTool.intersect(xgtf, stream=True, split=True, s=True):
+        is_multimapper = not "NH:i:1" in alignment.fields[9:]
         if not is_multimapper:
             continue
 
-        should_check = False
+        qname = alignment.fields[0]
+        if not qname in tocheck:
+            tocheck[qname] = 0
+        tocheck[qname] += 1
 
-        iv_seq = ( co.ref_iv for co in alignment.cigar if co.type == "M" and co.size > 0 )
-
-        for genomic_iv in iv_seq:
-            for iv, value in exons[genomic_iv].steps():
-                if value:
-                    should_check = True
-                    break
-            if should_check:
-                break
-
-        if should_check:
-            qname = alignment.read.name
-            if not qname in tocheck:
-                tocheck[qname] = 0
-            tocheck[qname] += 1
-
-    print "Determining which multimappers are not real..."
+    info("Determining which multimappers are not real...")
     tofix = set()
     for (qname, count) in tocheck.iteritems():
         if count == 1:
@@ -124,8 +113,8 @@ def main():
             for (qname, count) in tocheck.iteritems():
                 counts_out.write("%s\t%s\n" % (qname, count))
 
-    print "Number of exonic mutlimappers:", len(tocheck)
-    print "Number of fixable mutlimappers:", len(tofix)
+    info("Number of exonic mutlimappers: %d", len(tocheck))
+    info("Number of fixable mutlimappers: %d", len(tofix))
 
     if args.stats_only:
         return
@@ -216,7 +205,6 @@ def make_argparser():
             metavar="INPUT_BAM",
             help="file with alignments to fix")
     return parser
-
 
 
 if __name__ == '__main__':
