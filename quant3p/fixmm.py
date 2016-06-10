@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import sys
 import pybedtools
 import argparse
@@ -75,7 +76,7 @@ def main():
     extension_5p = args.extension_5p
 
     if not args.stats_only and not args.output_file:
-        error("Please either proved output file or --stats-only flag")
+        error("Please either provide output file or --stats-only flag")
         sys.exit(1)
 
     info("Finding exonic multimappers...")
@@ -91,16 +92,21 @@ def main():
 
     tocheck = {}
 
-    # using HTSeq here because of genomic intervals
-    for alignment in bamTool.intersect(xgtf, stream=True, split=True, s=True):
-        is_multimapper = not "NH:i:1" in alignment.fields[9:]
-        if not is_multimapper:
-            continue
+    exonicBam = bamTool.intersect(xgtf, split=True, s=True)
 
-        qname = alignment.fields[0]
-        if not qname in tocheck:
-            tocheck[qname] = 0
-        tocheck[qname] += 1
+    try:
+        # using HTSeq here because of genomic intervals
+        for alignment in exonicBam:
+            is_multimapper = not "NH:i:1" in alignment.fields[9:]
+            if not is_multimapper:
+                continue
+
+            qname = alignment.fields[0]
+            if not qname in tocheck:
+                tocheck[qname] = 0
+            tocheck[qname] += 1
+    finally:
+        os.unlink(exonicBam.fn)
 
     info("Determining which multimappers are not real...")
     tofix = set()
