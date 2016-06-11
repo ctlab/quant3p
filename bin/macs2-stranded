@@ -84,10 +84,17 @@ echo "Calling peaks"
 macs_pos_dir="${NAME}.pos.macs"
 macs_neg_dir="${NAME}.neg.macs"
 
-macs2 callpeak -t <(samtools cat -o - "${BAMS[@]}" | samtools view -F 16 -) \
+
+if [[ ${#BAMS[@]} -gt 1 ]]; then
+    CAT_CMD="samtool cat -o -"
+else
+    CAT_CMD="cat"
+fi
+
+macs2 callpeak -t <($CAT_CMD "${BAMS[@]}" | samtools view -F 16 -) \
     --outdir "${macs_pos_dir}" --nomodel -f SAM -g "$GSIZE" \
     -n "${NAME}.pos" -q "$QVALUE" & pos_pid="$!"
-macs2 callpeak -t <(samtools cat -o - "${BAMS[@]}" | samtools view -f 16 -) \
+macs2 callpeak -t <($CAT_CMD "${BAMS[@]}" | samtools view -f 16 -) \
     --outdir "${macs_neg_dir}" --nomodel -f SAM -g "$GSIZE" \
     -n "${NAME}.neg" -q "$QVALUE" & neg_pid="$!"
 
