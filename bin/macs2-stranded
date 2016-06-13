@@ -86,7 +86,7 @@ macs_neg_dir="${NAME}.neg.macs"
 
 
 if [[ ${#BAMS[@]} -gt 1 ]]; then
-    CAT_CMD="samtool cat -o -"
+    CAT_CMD="samtools cat -o -"
 else
     CAT_CMD="cat"
 fi
