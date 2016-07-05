@@ -92,7 +92,7 @@ def main():
 
     tocheck = {}
 
-    exonicBam = bamTool.intersect(xgtf, split=True, s=True)
+    exonicBam = bamTool.intersect(xgtf, split=True, s=True, nonamecheck=True)
 
     try:
         # using HTSeq here because of genomic intervals
