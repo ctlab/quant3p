@@ -91,11 +91,14 @@ else
     CAT_CMD="cat"
 fi
 
+$CAT_CMD "${BAMS[@]}" | samtools view | head -100 > peek.sam
+TAG_SIZE=$(( $(cut -f 10 peek.sam | wc -c) / $(cat peek.sam | wc -l) ))
+
 macs2 callpeak -t <($CAT_CMD "${BAMS[@]}" | samtools view -F 16 -) \
-    --outdir "${macs_pos_dir}" --nomodel -f SAM -g "$GSIZE" \
+    --outdir "${macs_pos_dir}" -s $TAG_SIZE --nomodel -f SAM -g "$GSIZE" \
     -n "${NAME}.pos" -q "$QVALUE" & pos_pid="$!"
 macs2 callpeak -t <($CAT_CMD "${BAMS[@]}" | samtools view -f 16 -) \
-    --outdir "${macs_neg_dir}" --nomodel -f SAM -g "$GSIZE" \
+    --outdir "${macs_neg_dir}" -s $TAG_SIZE --nomodel -f SAM -g "$GSIZE" \
     -n "${NAME}.neg" -q "$QVALUE" & neg_pid="$!"
 
 wait $pos_pid 
