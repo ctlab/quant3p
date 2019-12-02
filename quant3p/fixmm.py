@@ -61,7 +61,7 @@ def extended_exons(features, extension_5p, extension_3p, extend_all_exons):
                 if feature_to_push:
                     yield feature_to_push
 
-    for exon in last_exons.itervalues():
+    for exon in last_exons.values():
         yield extend_iv(exon)
 
 def main():
@@ -110,13 +110,13 @@ def main():
 
     info("Determining which multimappers are not real...")
     tofix = set()
-    for (qname, count) in tocheck.iteritems():
+    for (qname, count) in tocheck.items():
         if count == 1:
             tofix.add(qname)
 
     if args.counts_out:
         with open(args.counts_out, "w") as counts_out:
-            for (qname, count) in tocheck.iteritems():
+            for (qname, count) in tocheck.items():
                 counts_out.write("%s\t%s\n" % (qname, count))
 
     info("Number of exonic mutlimappers: %d", len(tocheck))

@@ -109,7 +109,7 @@ count_bam() {
     TAG=`basename "${BAM}" .bam`
     fix-mm -g "${GTF}" "${BAM}" -o - | \
         samtools view -h - | \
-        htseq-count -s yes -t exon - "${fixed_gtf}" > "${htseq_dir}/${TAG}.htseq.out"
+        htseq-count --secondary-alignments score -s yes -t exon - "${fixed_gtf}" > "${htseq_dir}/${TAG}.htseq.out"
 }
 
 

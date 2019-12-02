@@ -186,3 +186,5 @@ __alignment_not_unique  826
 
 `gtf-extend` and `fix-mm` needs `pybedtools` and `pysam` python packages and `bedtools` with `samtools` installed
 
+
+All the dependencies can be installed using conda: `conda install -c bioconda macs2 pybedtools pysam HTseq`

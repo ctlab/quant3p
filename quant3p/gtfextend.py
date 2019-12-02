@@ -4,6 +4,7 @@ import sys
 import pysam
 import HTSeq
 import argparse
+from functools import reduce
 from copy import copy
 import csv
 
@@ -24,18 +25,18 @@ def main():
 
     extension_3p = args.extension_3p
 
-    print "Loading peaks..."
+    print("Loading peaks...")
     peaks = HTSeq.GenomicArrayOfSets("auto", stranded=True)
 
-    print "Reading annotation..."
+    print("Reading annotation...")
 
     for (chrom, start, end, name, score, strand, fold_enrichment, pval, qval, summit) in \
             csv.reader(open(args.peaks_file), delimiter="\t"):
         iv = HTSeq.GenomicInterval(chrom, int(start), int(end), strand)
-        peak = HTSeq.GenomicFeature(name, "peak", iv)
-        peak.score = score
+        #peak = HTSeq.GenomicFeature(name, "peak", iv)
+        #peak.score = score
 
-        peaks[iv] += peak
+        peaks[iv] += (iv, name)
 
 
     def is_upstream(e1, e2):
@@ -78,13 +79,13 @@ def main():
 
         gtf_out.write(feature.get_gff_line())
 
-    for transcript_iv in transcript_ivs.itervalues():
+    for transcript_iv in transcript_ivs.values():
         steps = peaks[transcript_iv].steps()
         values = [value for (iv, value) in steps]
         intragenic_peaks |= reduce(set.union, values, set())
 
     
-    print "Number of intragenic peaks:", len(intragenic_peaks)
+    print("Number of intragenic peaks:", len(intragenic_peaks))
     exons_added = 0
 
     extns_out = None
@@ -92,7 +93,7 @@ def main():
     if args.extns_out:
         extns_out = open(args.extns_out, "w")
 
-    for exon in last_exons.itervalues():
+    for exon in last_exons.values():
         iv = exon.iv
         post3p_iv = iv.copy()
         if iv.strand == "+":
@@ -111,10 +112,9 @@ def main():
 
         overlapping_peaks.difference_update(intragenic_peaks)
 
-        for peak in overlapping_peaks:
-            extension = copy(peak)
+        for (iv, name) in overlapping_peaks:
+            extension = HTSeq.GenomicFeature(name, "exon", iv)
             extension.source = args.source
-            extension.type = "exon"
             extension.attr = exon.attr
             exons_added += 1
             gtf_out.write(extension.get_gff_line())
@@ -122,7 +122,7 @@ def main():
                 extns_out.write(extension.get_gff_line())
 
     gtf_out.close()
-    print "Exons added:", exons_added
+    print("Exons added:", exons_added)
 
 
 def make_argparser():
