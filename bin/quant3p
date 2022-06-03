@@ -96,7 +96,7 @@ echo "Calling peaks..."
 macs2-stranded $KEEP_TEMP -n "${NAME}" -g "${GSIZE}" -q "${QVALUE}" "${BAMS[@]}" | sed "s/^/  /"
 peaks="${NAME}"_peaks.narrowPeak
 
-echo "Extending annotaion..."
+echo "Extending annotation..."
 fixed_gtf="${NAME}.`basename "${GTF}" .gtf`.fixed.gtf"
 gtf-extend -g "${GTF}" -p "${peaks}" -o "${fixed_gtf}" | sed "s/^/  /"
 
